@@ -8,8 +8,8 @@ import com.veoride.taxiservice.service.TaxiService;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,14 +18,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class TaxiController {
 
-    private Map<String, Taxi> taxis;
-    private Map<String, CustomerRequest> customerRequests;
-
-    public TaxiController(TaxiService taxiService) {
-
-        taxis = taxiService.getTaxis();
-        customerRequests = taxiService.getCustomerRequests();
-    }
+    @Autowired
+    TaxiService taxiService;
 
     /**
      * Update the status of a taxi.
@@ -39,7 +33,7 @@ public class TaxiController {
     public void updateTaxiStatus(@PathVariable("plate_number") String plateNumber, boolean available, float lat,
             float lng) {
 
-        Taxi taxi = taxis.get(plateNumber);
+        Taxi taxi = taxiService.getTaxis().get(plateNumber);
         taxi.setAvailable(available);
         taxi.setLat(lat);
         taxi.setLng(lng);
@@ -56,7 +50,7 @@ public class TaxiController {
 
         List<Customer> customersWhoRequestedTaxi = new ArrayList<>();
 
-        for (CustomerRequest request : taxis.get(plateNumber).getCustomerRequests().values()) {
+        for (CustomerRequest request : taxiService.getTaxis().get(plateNumber).getCustomerRequests().values()) {
             customersWhoRequestedTaxi.add(request.getCustomer());
         }
 
@@ -75,7 +69,7 @@ public class TaxiController {
     @PatchMapping("api/customer/{phone_number}/request")
     public boolean acceptOrDenyRequest(@PathVariable("phone_number") String phone_number, boolean accept) {
 
-        CustomerRequest customerRequest = customerRequests.get(phone_number);
+        CustomerRequest customerRequest = taxiService.getCustomerRequests().get(phone_number);
 
         if (customerRequest == null) {
             return false;
@@ -89,7 +83,7 @@ public class TaxiController {
         }
 
         String plateNumber = customerRequest.getTaxi().getPlateNumber();
-        taxis.get(plateNumber).getCustomerRequests().remove(phone_number);
+        taxiService.getTaxis().get(plateNumber).getCustomerRequests().remove(phone_number);
 
         return true;
     }

@@ -7,8 +7,8 @@ import com.veoride.taxiservice.model.CustomerRequest.CustomerRequestStatus;
 import com.veoride.taxiservice.service.TaxiService;
 
 import java.util.List;
-import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,17 +20,9 @@ public class CustomerController {
 
     private static final Long REQUEST_TIMEOUT = 60000L;
     private static final Long WAIT_INTERVAL = 5000L;
-
-    private Map<String, Taxi> taxis;
-    private Map<String, Customer> customers;
-    private Map<String, CustomerRequest> customerRequests;
-
-    public CustomerController(TaxiService taxiService) {
-
-        taxis = taxiService.getTaxis();
-        customers = taxiService.getCustomers();
-        customerRequests = taxiService.getCustomerRequests();
-    }
+    
+    @Autowired
+    TaxiService taxiService;
 
     /**
      * Get a list of nearby taxis.
@@ -44,7 +36,7 @@ public class CustomerController {
     public List<Taxi> getNearbyTaxis(@RequestParam(name = "distance") float distance,
             @RequestParam(name = "lat") float lat, @RequestParam(name = "lng") float lng) {
 
-        return taxis.values().stream().filter(taxi -> distanceFromTaxi(lat, lng, taxi) < distance).toList();
+        return taxiService.getTaxis().values().stream().filter(taxi -> distanceFromTaxi(lat, lng, taxi) < distance).toList();
     }
 
     /**
@@ -62,38 +54,38 @@ public class CustomerController {
     public String sendRequestToTaxis(@PathVariable("phone_number") String phoneNumber, List<String> plateNumbers)
             throws InterruptedException {
 
-        Customer customer = customers.get(phoneNumber);
+        Customer customer = taxiService.getCustomers().get(phoneNumber);
         long waitTime = 0L;
 
         for (String plateNumber : plateNumbers) {
 
-            Taxi taxi = taxis.get(plateNumber);
+            Taxi taxi = taxiService.getTaxis().get(plateNumber);
 
             if (taxi.isAvailable()) {
                 CustomerRequest customerRequest = new CustomerRequest(customer, taxi);
                 taxi.getCustomerRequests().put(phoneNumber, customerRequest);
-                customerRequests.put(phoneNumber, customerRequest);
+                taxiService.getCustomerRequests().put(phoneNumber, customerRequest);
 
                 while (customerRequest.getStatus().equals(CustomerRequestStatus.PENDING)) {
                     Thread.sleep(WAIT_INTERVAL);
                     waitTime += WAIT_INTERVAL;
 
                     if (waitTime >= REQUEST_TIMEOUT) {
-                        customerRequests.remove(phoneNumber);
+                        taxiService.getCustomerRequests().remove(phoneNumber);
                         taxi.getCustomerRequests().remove(phoneNumber);
                         return null;
                     }
                 }
 
                 if (customerRequest.getStatus().equals(CustomerRequestStatus.ACCEPTED)) {
-                    customerRequests.remove(phoneNumber);
+                    taxiService.getCustomerRequests().remove(phoneNumber);
                     taxi.getCustomerRequests().remove(phoneNumber);
                     return taxi.getPlateNumber();
                 }
             }
         }
 
-        customerRequests.remove(phoneNumber);
+        taxiService.getCustomerRequests().remove(phoneNumber);
         return null;
     }
 
