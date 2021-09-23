@@ -23,6 +23,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import com.veoride.taxiservice.model.Customer;
 import com.veoride.taxiservice.model.CustomerRequest;
 import com.veoride.taxiservice.model.Taxi;
+import com.veoride.taxiservice.model.TaxiStatus;
 import com.veoride.taxiservice.service.TaxiService;
 
 import lombok.SneakyThrows;
@@ -41,8 +42,8 @@ public class CustomerControllerTests {
     public void testGetNearbyTaxis() {
 
         Map<String, Taxi> taxis = new HashMap<>();
-        taxis.put("ABCDEFG", new Taxi("ABCDEFG", 0, 0));
-        taxis.put("HIJKLMN", new Taxi("HIJKLMN", 5, 5));
+        taxis.put("ABCDEFG", new Taxi("ABCDEFG", new TaxiStatus(true, 0.0f, 0.0f)));
+        taxis.put("HIJKLMN", new Taxi("HIJKLMN", new TaxiStatus(true, 5.0f, 5.0f)));
         Mockito.when(taxiService.getTaxis()).thenReturn(taxis);
 
         mockMvc.perform(get("/api/taxi/nearby?distance=1&lat=5&lng=5"))
@@ -62,7 +63,7 @@ public class CustomerControllerTests {
         customers.put("111-222-3333", new Customer("111-222-3333"));
         
         Map<String, Taxi> taxis = new HashMap<>();
-        taxis.put("ABCDEFG", new Taxi("ABCDEFG"));
+        taxis.put("ABCDEFG", new Taxi("ABCDEFG", new TaxiStatus(true, 0.0f, 0.0f)));
         
         Map<String, CustomerRequest> customerRequests = new HashMap<>();
         

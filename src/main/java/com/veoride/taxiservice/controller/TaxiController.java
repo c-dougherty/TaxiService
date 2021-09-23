@@ -3,6 +3,7 @@ package com.veoride.taxiservice.controller;
 import com.veoride.taxiservice.model.Customer;
 import com.veoride.taxiservice.model.CustomerRequest;
 import com.veoride.taxiservice.model.Taxi;
+import com.veoride.taxiservice.model.TaxiStatus;
 import com.veoride.taxiservice.model.CustomerRequest.CustomerRequestStatus;
 import com.veoride.taxiservice.service.TaxiService;
 
@@ -13,78 +14,99 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 public class TaxiController {
 
-    @Autowired
-    TaxiService taxiService;
+	@Autowired
+	TaxiService taxiService;
 
-    /**
-     * Update the status of a taxi.
-     * 
-     * @param plateNumber - plate number of the taxi
-     * @param available   - new availability of the taxi
-     * @param lat         - new latitude location of the taxi
-     * @param lng         - new longitude location of the taxi
-     */
-    @PatchMapping("api/taxi/{plate_number}")
-    public void updateTaxiStatus(@PathVariable("plate_number") String plateNumber, boolean available, float lat,
-            float lng) {
+	/**
+	 * Add a new taxi to the taxi service.
+	 * 
+	 * @param plateNumber - plate number of the taxi
+	 * @param status      - status of the taxi
+	 */
+	@PutMapping("/api/taxi/{plate_number}")
+	public void addTaxi(@PathVariable("plate_number") String plateNumber, @RequestBody TaxiStatus status) {
 
-        Taxi taxi = taxiService.getTaxis().get(plateNumber);
-        taxi.setAvailable(available);
-        taxi.setLat(lat);
-        taxi.setLng(lng);
-    }
+		Taxi taxi = new Taxi(plateNumber, status);
+		taxiService.getTaxis().put(plateNumber, taxi);
+	}
 
-    /**
-     * Get list of customers who have made a request to a specific taxi
-     * 
-     * @param plateNumber - plate number of specific taxi
-     * @return list of customers who have made a request to the taxi
-     */
-    @GetMapping("api/taxi/{plate_number}/requests")
-    public List<Customer> getRequestsMadeToTaxi(@PathVariable("plate_number") String plateNumber) {
+	/**
+	 * Get the info of a specific taxi.
+	 * 
+	 * @param plateNumber - plate number of the taxi
+	 * @return taxi info
+	 */
+	@GetMapping("/api/taxi/{plate_number}")
+	public Taxi getTaxi(@PathVariable("plate_number") String plateNumber) {
 
-        List<Customer> customersWhoRequestedTaxi = new ArrayList<>();
+		return taxiService.getTaxis().get(plateNumber);
+	}
 
-        for (CustomerRequest request : taxiService.getTaxis().get(plateNumber).getCustomerRequests().values()) {
-            customersWhoRequestedTaxi.add(request.getCustomer());
-        }
+	/**
+	 * Update the status of a specific taxi.
+	 * 
+	 * @param plateNumber - plate number of the taxi
+	 * @param status      - new taxi status
+	 */
+	@PatchMapping("/api/taxi/{plate_number}")
+	public void updateTaxiStatus(@PathVariable("plate_number") String plateNumber, @RequestBody TaxiStatus status) {
 
-        return customersWhoRequestedTaxi;
-    }
+		Taxi taxi = taxiService.getTaxis().get(plateNumber);
+		taxi.setStatus(status);
+	}
 
-    /**
-     * Accept or deny a customer request.
-     * 
-     * @param phone_number - customer phone number
-     * @param accept       - flag indicating whether to accept or deny customer
-     *                     request
-     * @return true if successfully accepted or denied customer request, false
-     *         otherwise.
-     */
-    @PatchMapping("api/customer/{phone_number}/request")
-    public boolean acceptOrDenyRequest(@PathVariable("phone_number") String phone_number, boolean accept) {
+	/**
+	 * Get list of customers who have made a request to a specific taxi.
+	 * 
+	 * @param plateNumber - plate number of specific taxi
+	 * @return list of customers who have made a request to the taxi
+	 */
+	@GetMapping("/api/taxi/{plate_number}/requests")
+	public List<Customer> getRequestsMadeToTaxi(@PathVariable("plate_number") String plateNumber) {
 
-        CustomerRequest customerRequest = taxiService.getCustomerRequests().get(phone_number);
+		List<Customer> customersWhoRequestedTaxi = new ArrayList<>();
 
-        if (customerRequest == null) {
-            return false;
-        }
+		for (CustomerRequest request : taxiService.getTaxis().get(plateNumber).getCustomerRequests().values()) {
+			customersWhoRequestedTaxi.add(request.getCustomer());
+		}
 
-        if (accept) {
-            customerRequest.setStatus(CustomerRequestStatus.ACCEPTED);
-        }
-        else {
-            customerRequest.setStatus(CustomerRequestStatus.DENIED);
-        }
+		return customersWhoRequestedTaxi;
+	}
 
-        String plateNumber = customerRequest.getTaxi().getPlateNumber();
-        taxiService.getTaxis().get(plateNumber).getCustomerRequests().remove(phone_number);
+	/**
+	 * Accept or deny a customer request.
+	 * 
+	 * @param phone_number - customer phone number
+	 * @param accept       - flag indicating whether to accept or deny customer
+	 *                     request
+	 * @return true if successfully accepted or denied customer request, false
+	 *         otherwise.
+	 */
+	@PatchMapping("/api/customer/{phone_number}/request")
+	public boolean acceptOrDenyRequest(@PathVariable("phone_number") String phone_number, boolean accept) {
 
-        return true;
-    }
+		CustomerRequest customerRequest = taxiService.getCustomerRequests().get(phone_number);
+
+		if (customerRequest == null) {
+			return false;
+		}
+
+		if (accept) {
+			customerRequest.setStatus(CustomerRequestStatus.ACCEPTED);
+		} else {
+			customerRequest.setStatus(CustomerRequestStatus.DENIED);
+		}
+
+		String plateNumber = customerRequest.getTaxi().getPlateNumber();
+		taxiService.getTaxis().get(plateNumber).getCustomerRequests().remove(phone_number);
+
+		return true;
+	}
 }

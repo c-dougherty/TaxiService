@@ -32,7 +32,7 @@ public class CustomerController {
      * @param lng      - longitude of current location
      * @return list of taxis within distance from the current location.
      */
-    @GetMapping("api/taxi/nearby")
+    @GetMapping("/api/taxi/nearby")
     public List<Taxi> getNearbyTaxis(@RequestParam(name = "distance") float distance,
             @RequestParam(name = "lat") float lat, @RequestParam(name = "lng") float lng) {
 
@@ -50,7 +50,7 @@ public class CustomerController {
      *         otherwise.
      * @throws InterruptedException
      */
-    @PostMapping("api/customer/{phone_number}/request")
+    @PostMapping("/api/customer/{phone_number}/request")
     public String sendRequestToTaxis(@PathVariable("phone_number") String phoneNumber, List<String> plateNumbers)
             throws InterruptedException {
 
@@ -61,7 +61,7 @@ public class CustomerController {
 
             Taxi taxi = taxiService.getTaxis().get(plateNumber);
 
-            if (taxi.isAvailable()) {
+            if (taxi.getStatus().isAvailable()) {
                 CustomerRequest customerRequest = new CustomerRequest(customer, taxi);
                 taxi.getCustomerRequests().put(phoneNumber, customerRequest);
                 taxiService.getCustomerRequests().put(phoneNumber, customerRequest);
@@ -100,8 +100,8 @@ public class CustomerController {
      */
     private float distanceFromTaxi(float lat, float lng, Taxi taxi) {
 
-        float latDistance = Math.abs(lat - taxi.getLat());
-        float lngDistance = Math.abs(lng - taxi.getLng());
+        float latDistance = Math.abs(lat - taxi.getStatus().getLat());
+        float lngDistance = Math.abs(lng - taxi.getStatus().getLng());
 
         return (float) Math.hypot(latDistance, lngDistance);
     }
